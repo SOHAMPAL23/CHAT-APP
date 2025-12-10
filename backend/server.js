@@ -10,6 +10,7 @@ import { initializeSocket } from './config/socket.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import storyRoutes from './routes/storyRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +43,7 @@ app.use(cookieParser()); // Parse cookies
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/stories', storyRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
