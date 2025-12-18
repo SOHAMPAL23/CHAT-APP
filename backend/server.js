@@ -11,6 +11,8 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import storyRoutes from './routes/storyRoutes.js';
+import groupRoutes from './routes/groupRoutes.js';
+import channelRoutes from './routes/channelRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +46,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/stories', storyRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/channels', channelRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
