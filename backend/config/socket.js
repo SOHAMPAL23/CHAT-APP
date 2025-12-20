@@ -81,7 +81,7 @@ export const initializeSocket = (server) => {
     socket.emit('onlineUsers', onlineUsersList);
 
     /**
-     * Handle sending messages
+     * Handle sending messages (DM)
      */
     socket.on('sendMessage', async (data) => {
       try {
@@ -91,7 +91,8 @@ export const initializeSocket = (server) => {
         const message = await Message.create({
           senderId: socket.userId,
           receiverId,
-          messageText
+          messageText,
+          messageType: 'dm'
         });
 
         // Populate sender and receiver details
@@ -118,7 +119,50 @@ export const initializeSocket = (server) => {
     });
 
     /**
-     * Handle typing indicator
+     * Handle sending channel messages
+     */
+    socket.on('sendChannelMessage', async (data) => {
+      try {
+        const { channelId, groupId, messageText, mentions, mentionEveryone, replyTo } = data;
+
+        // Create message in database
+        const message = await Message.create({
+          senderId: socket.userId,
+          channelId,
+          groupId,
+          messageType: 'channel',
+          messageText,
+          mentions: mentions || [],
+          mentionEveryone: mentionEveryone || false,
+          replyTo: replyTo || null
+        });
+
+        // Populate message
+        await message.populate('senderId', 'username profilePicture');
+        await message.populate('mentions', 'username');
+        if (replyTo) {
+          await message.populate('replyTo', 'messageText senderId');
+        }
+
+        // Broadcast to all users in the channel
+        io.to(`channel:${channelId}`).emit('receiveChannelMessage', {
+          channelId,
+          message
+        });
+
+        // Send confirmation to sender
+        socket.emit('channelMessageSent', message);
+      } catch (error) {
+        console.error('Send channel message error:', error);
+        socket.emit('messageError', {
+          message: 'Failed to send channel message',
+          error: error.message
+        });
+      }
+    });
+
+    /**
+     * Handle typing indicator (DM)
      */
     socket.on('typing', (data) => {
       const { receiverId, isTyping } = data;
@@ -131,6 +175,21 @@ export const initializeSocket = (server) => {
           isTyping
         });
       }
+    });
+
+    /**
+     * Handle typing indicator (Channel)
+     */
+    socket.on('channelTyping', (data) => {
+      const { channelId, isTyping } = data;
+
+      // Broadcast to all users in the channel except sender
+      socket.to(`channel:${channelId}`).emit('channelUserTyping', {
+        channelId,
+        userId: socket.userId,
+        username: socket.user.username,
+        isTyping
+      });
     });
 
     /**
@@ -243,23 +302,82 @@ export const initializeSocket = (server) => {
     });
 
     /**
-     * Handle user joining a chat room
+     * Handle user joining a DM room
      */
     socket.on('joinRoom', (data) => {
       const { userId } = data;
       const roomId = [socket.userId, userId].sort().join('-');
       socket.join(roomId);
-      console.log(`User ${socket.user.username} joined room: ${roomId}`);
+      console.log(`User ${socket.user.username} joined DM room: ${roomId}`);
     });
 
     /**
-     * Handle user leaving a chat room
+     * Handle user leaving a DM room
      */
     socket.on('leaveRoom', (data) => {
       const { userId } = data;
       const roomId = [socket.userId, userId].sort().join('-');
       socket.leave(roomId);
-      console.log(`User ${socket.user.username} left room: ${roomId}`);
+      console.log(`User ${socket.user.username} left DM room: ${roomId}`);
+    });
+
+    /**
+     * Handle user joining a channel
+     */
+    socket.on('joinChannel', (data) => {
+      const { channelId } = data;
+      socket.join(`channel:${channelId}`);
+      console.log(`User ${socket.user.username} joined channel: ${channelId}`);
+
+      // Notify others in the channel
+      socket.to(`channel:${channelId}`).emit('userJoinedChannel', {
+        channelId,
+        userId: socket.userId,
+        username: socket.user.username
+      });
+    });
+
+    /**
+     * Handle user leaving a channel
+     */
+    socket.on('leaveChannel', (data) => {
+      const { channelId } = data;
+      socket.leave(`channel:${channelId}`);
+      console.log(`User ${socket.user.username} left channel: ${channelId}`);
+
+      // Notify others in the channel
+      socket.to(`channel:${channelId}`).emit('userLeftChannel', {
+        channelId,
+        userId: socket.userId,
+        username: socket.user.username
+      });
+    });
+
+    /**
+     * Handle user joining a group (join all channels)
+     */
+    socket.on('joinGroup', async (data) => {
+      const { groupId } = data;
+
+      try {
+        const Group = (await import('../models/Group.js')).default;
+        const Channel = (await import('../models/Channel.js')).default;
+
+        const group = await Group.findById(groupId).populate('channels');
+        if (group && group.isMember(socket.userId)) {
+          // Join all accessible channels
+          const userRole = group.getMemberRole(socket.userId);
+          group.channels.forEach((channel) => {
+            if (channel.hasAccess && channel.hasAccess(socket.userId, userRole)) {
+              socket.join(`channel:${channel._id}`);
+            }
+          });
+
+          console.log(`User ${socket.user.username} joined group: ${groupId}`);
+        }
+      } catch (error) {
+        console.error('Join group error:', error);
+      }
     });
 
     /**
