@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
@@ -6,7 +7,7 @@ import MessageBubble from './MessageBubble';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 
 export default function MessageList() {
-    const { selectedUser, messages } = useChatStore();
+    const { selectedUser, messages, isLoading } = useChatStore();
     const { user } = useAuthStore();
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
@@ -42,41 +43,124 @@ export default function MessageList() {
         }
     };
 
+    // Loading state
+    if (isLoading) {
+        return (
+            <Box
+                sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                <CircularProgress sx={{ color: '#00a884' }} />
+            </Box>
+        );
+    }
+
+    // Empty state
     if (currentMessages.length === 0) {
         return (
-            <div className="messages-container">
-                <div className="empty-state">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                    >
-                        <p style={{ color: 'var(--text-muted)' }}>
-                            No messages yet. Start the conversation!
-                        </p>
-                    </motion.div>
-                </div>
-            </div>
+            <Box
+                sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 4,
+                }}
+            >
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Box
+                            sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: '50%',
+                                bgcolor: 'rgba(0, 168, 132, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mx: 'auto',
+                                mb: 2,
+                            }}
+                        >
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="#00a884">
+                                <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16M7,9V11H9V9H7M11,9V11H13V9H11M15,9V11H17V9H15Z" />
+                            </svg>
+                        </Box>
+                        <Typography sx={{ color: '#8696a0', fontSize: '0.95rem' }}>
+                            No messages yet
+                        </Typography>
+                        <Typography sx={{ color: '#8696a0', fontSize: '0.85rem', mt: 0.5 }}>
+                            Start the conversation! 👋
+                        </Typography>
+                    </Box>
+                </motion.div>
+            </Box>
         );
     }
 
     return (
-        <div className="messages-container" ref={messagesContainerRef}>
+        <Box
+            ref={messagesContainerRef}
+            sx={{
+                height: '100%',
+                overflowY: 'auto',
+                py: 2,
+                px: { xs: 1, md: 2 },
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+        >
             <AnimatePresence>
                 {Object.entries(groupedMessages).map(([dateKey, msgs]) => (
-                    <div key={dateKey}>
+                    <Box key={dateKey}>
                         {/* Date Divider */}
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="message-date-divider"
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                margin: '16px 0',
+                            }}
                         >
-                            <span className="date-badge">{formatDateDivider(dateKey)}</span>
+                            <Box
+                                sx={{
+                                    px: 2,
+                                    py: 0.75,
+                                    bgcolor: 'rgba(30, 44, 52, 0.9)',
+                                    borderRadius: 2,
+                                    backdropFilter: 'blur(10px)',
+                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: '#8696a0',
+                                        fontWeight: 500,
+                                        fontSize: '0.75rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                    }}
+                                >
+                                    {formatDateDivider(dateKey)}
+                                </Typography>
+                            </Box>
                         </motion.div>
 
                         {/* Messages for this date */}
                         {msgs.map((message, index) => {
-                            const isSent = message.senderId?._id === user?._id || message.senderId === user?._id;
+                            const isSent =
+                                message.senderId?._id === user?._id ||
+                                message.senderId === user?._id;
 
                             return (
                                 <MessageBubble
@@ -87,10 +171,10 @@ export default function MessageList() {
                                 />
                             );
                         })}
-                    </div>
+                    </Box>
                 ))}
             </AnimatePresence>
             <div ref={messagesEndRef} />
-        </div>
+        </Box>
     );
 }

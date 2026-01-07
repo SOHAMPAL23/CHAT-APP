@@ -19,11 +19,8 @@ export default function WhatsAppMessageInput() {
         const messageText = message.trim();
         setMessage('');
 
-        // Send via socket for real-time
-        socketService.sendMessage(selectedUser._id, messageText);
-
-        // Also send via API
-        await sendMessage(selectedUser._id, { messageText });
+        // Send via socket for real-time delivery
+        await sendMessage(selectedUser._id, messageText);
     };
 
     const handleKeyPress = (e) => {
