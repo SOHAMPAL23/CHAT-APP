@@ -2,7 +2,8 @@ import express from 'express';
 import {
   getAllUsers,
   getUserById,
-  updateProfile
+  updateProfile,
+  searchUsers
 } from '../controllers/userController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -15,8 +16,10 @@ const router = express.Router();
 
 router.use(protect); // Apply protect middleware to all routes
 
+router.get('/search', searchUsers);
 router.get('/', getAllUsers);
 router.get('/:userId', getUserById);
 router.put('/profile', updateProfile);
 
 export default router;
+
