@@ -28,6 +28,50 @@ export const getAllUsers = async (req, res) => {
 };
 
 /**
+ * @route   GET /api/users/search
+ * @desc    Search users by username or email
+ * @access  Private
+ */
+export const searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length < 1) {
+      return res.status(200).json({
+        success: true,
+        users: []
+      });
+    }
+
+    const searchRegex = new RegExp(q.trim(), 'i');
+
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      $or: [
+        { username: searchRegex },
+        { email: searchRegex }
+      ]
+    })
+      .select('-password')
+      .limit(20)
+      .sort({ isOnline: -1, username: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users
+    });
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while searching users',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @route   GET /api/users/:userId
  * @desc    Get user by ID
  * @access  Private
