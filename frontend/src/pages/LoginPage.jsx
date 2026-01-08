@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { login, isLoading, error, clearError } = useAuthStore();
+    const { login, isLoggingIn, error, clearError } = useAuthStore();
 
     const [formData, setFormData] = useState({
         email: '',
@@ -153,9 +153,9 @@ export default function LoginPage() {
                         whileTap={{ scale: 0.98 }}
                         type="submit"
                         className="btn btn-primary w-full"
-                        disabled={isLoading}
+                        disabled={isLoggingIn}
                     >
-                        {isLoading ? (
+                        {isLoggingIn ? (
                             <div className="spinner-small"></div>
                         ) : (
                             <>
